@@ -2,29 +2,29 @@ package main
 
 import (
 	"fmt"
-	"io"
-	"os"
 )
 
-// Capper implements io.Writer and turns everything to uppercase.
-type Capper struct {
-	w io.Writer
+type Ordered interface {
+	int | string | float64
 }
 
-func (c *Capper) Write(p []byte) (n int, err error) {
-	diff := byte('a' - 'A')
-
-	out := make([]byte, len(p))
-	for i, b := range p {
-		if b >= 'a' && b <= 'z' {
-			b -= diff
-		}
-		out[i] = b
+func min[T Ordered](values []T) (T, error) {
+	if len(values) == 0 {
+		var zero T
+		return zero, fmt.Errorf("empty slice")
 	}
-	return c.w.Write(out)
+
+	m := values[0]
+	for _, v := range values[1:] {
+		if v < m {
+			m = v
+		}
+	}
+	return m, nil
 }
 
 func main() {
-	c := &Capper{os.Stdout}
-	fmt.Fprintf(c, "hello, world\n")
+	fmt.Println(min([]int{1, 2, 3, 4, 5}))
+	fmt.Println(min([]string{"f", "b", "A", "d", "a"}))
+	fmt.Println(min([]float64{1.1, 2.2, 3.3, 4.4, 5.5, 0.1}))
 }
