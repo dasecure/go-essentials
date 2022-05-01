@@ -2,40 +2,29 @@ package main
 
 import (
 	"fmt"
-	"math"
+	"io"
+	"os"
 )
 
-type Square struct {
-	side float64
+// Capper implements io.Writer and turns everything to uppercase.
+type Capper struct {
+	w io.Writer
 }
 
-type Circle struct {
-	radius float64
-}
+func (c *Capper) Write(p []byte) (n int, err error) {
+	diff := byte('a' - 'A')
 
-func (s Square) Area() float64 {
-	return s.side * s.side
-}
-
-func (c Circle) Area() float64 {
-	return c.radius * c.radius * math.Pi
-}
-
-func sumAreas(Shapes []Shape) float64 { // Shape is an interface
-	total := 0.0
-	for _, s := range Shapes {
-		total += s.Area()
+	out := make([]byte, len(p))
+	for i, b := range p {
+		if b >= 'a' && b <= 'z' {
+			b -= diff
+		}
+		out[i] = b
 	}
-	return total
-}
-
-type Shape interface {
-	Area() float64
+	return c.w.Write(out)
 }
 
 func main() {
-	s := Square{20}
-	c := Circle{10}
-	Shapes := []Shape{s, c}
-	fmt.Println(sumAreas(Shapes))
+	c := &Capper{os.Stdout}
+	fmt.Fprintf(c, "hello, world\n")
 }
