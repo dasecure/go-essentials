@@ -2,39 +2,33 @@ package main
 
 import (
 	"fmt"
-	"time"
+	"net/http"
 )
 
-func main() {
-	ch := make(chan int)
-	// ch <- 1234
-	start := time.Now()
-	go func() {
-		ch <- 5678
-	}()
-	val := <-ch
-	elapsed := time.Since(start)
-	fmt.Println(val, elapsed)
-
-	fmt.Println("=====")
-
-	const count = 3
-	go func() {
-		for i := 0; i < count; i++ {
-			fmt.Printf("Sending %d\n", i)
-			ch <- i
-			time.Sleep(time.Second)
-		}
-		close(ch)
-	}()
-
-	for i := range ch {
-		// val := <-ch
-		fmt.Printf("Receiving %d\n", i)
+func returnType(url string, out chan string) {
+	resp, err := http.Get(url)
+	if err != nil {
+		out <- fmt.Sprint(err)
+		return
 	}
+	defer resp.Body.Close()
+	ctype := resp.Header.Get("Content-Type")
+	out <- fmt.Sprintf("%s: %s", url, ctype)
+}
 
-	ch2 := make(chan int, 1)
-	ch2 <- 123
-	val2 := <-ch2
-	fmt.Println(val2)
+func main() {
+	urls := []string{
+		"https://golang.org/",
+		"https://golang.org/doc/",
+		"https://golang.org/pkg/",
+		"https://golang.org/cmd/",
+	}
+	// create channels
+	ch := make(chan string)
+	for _, url := range urls {
+		go returnType(url, ch)
+	}
+	for range urls {
+		fmt.Println(<-ch)
+	}
 }
