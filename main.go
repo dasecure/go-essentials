@@ -2,29 +2,34 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"os"
+
+	"github.com/pkg/errors"
 )
 
-type Ordered interface {
-	int | string | float64
-}
-
-func min[T Ordered](values []T) (T, error) {
-	if len(values) == 0 {
-		var zero T
-		return zero, fmt.Errorf("empty slice")
+func killServer(pidFile string) error {
+	file, err := os.Open(pidFile)
+	if err != nil {
+		return err
 	}
+	defer file.Close()
 
-	m := values[0]
-	for _, v := range values[1:] {
-		if v < m {
-			m = v
-		}
+	var pid int
+	if _, err := fmt.Fscanf(file, "%d", &pid); err != nil {
+		return errors.Wrap(err, "failed to read pid")
 	}
-	return m, nil
+	fmt.Printf("kill server with pid: %d", pid)
+
+	if err := os.Remove(pidFile); err != nil {
+		log.Printf("failed to remove pid file: %v", err)
+	}
+	return nil
 }
 
 func main() {
-	fmt.Println(min([]int{1, 2, 3, 4, 5}))
-	fmt.Println(min([]string{"f", "b", "A", "d", "a"}))
-	fmt.Println(min([]float64{1.1, 2.2, 3.3, 4.4, 5.5, 0.1}))
+	if err := killServer("server.pid"); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		os.Exit(1)
+	}
 }
