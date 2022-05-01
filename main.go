@@ -2,41 +2,40 @@ package main
 
 import (
 	"fmt"
+	"math"
 )
 
 type Square struct {
-	x    int
-	y    int
 	side float64
 }
 
-func NewSquare(x int, y int, side float64) (*Square, error) {
-	if side <= 0 {
-		return nil, fmt.Errorf("side must be greater than 0")
-	}
-	return &Square{x, y, side}, nil
+type Circle struct {
+	radius float64
 }
 
-func (s *Square) Area() float64 {
+func (s Square) Area() float64 {
 	return s.side * s.side
 }
 
-func (s *Square) Perimeter() float64 {
-	return 4 * s.side
+func (c Circle) Area() float64 {
+	return c.radius * c.radius * math.Pi
 }
 
-func (s *Square) move(x int, y int) {
-	s.x += x
-	s.y += y
+func sumAreas(Shapes []Shape) float64 { // Shape is an interface
+	total := 0.0
+	for _, s := range Shapes {
+		total += s.Area()
+	}
+	return total
+}
+
+type Shape interface {
+	Area() float64
 }
 
 func main() {
-	s, err := NewSquare(1, 1, 10)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(s.Area())
-	fmt.Println(s.Perimeter())
-	s.move(2, 3)
-	fmt.Printf("%+v\n", s)
+	s := Square{20}
+	c := Circle{10}
+	Shapes := []Shape{s, c}
+	fmt.Println(sumAreas(Shapes))
 }
