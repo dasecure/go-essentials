@@ -3,33 +3,67 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
-
-	"github.com/pkg/errors"
+	"net/http"
+	"sync"
+	"time"
 )
 
-func killServer(pidFile string) error {
-	file, err := os.Open(pidFile)
+func returnType(url string) string {
+	resp, err := http.Get(url)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
-	defer file.Close()
+	defer resp.Body.Close()
+	return resp.Header.Get("Content-Type")
+}
 
-	var pid int
-	if _, err := fmt.Fscanf(file, "%d", &pid); err != nil {
-		return errors.Wrap(err, "failed to read pid")
+func siteConcurrent2(urls []string) {
+	var wg sync.WaitGroup
+	for _, url := range urls {
+		wg.Add(1)
+		go func(url string) {
+			defer wg.Done()
+			fmt.Println("**", url, returnType(url))
+		}(url)
 	}
-	fmt.Printf("kill server with pid: %d", pid)
+	wg.Wait()
+}
 
-	if err := os.Remove(pidFile); err != nil {
-		log.Printf("failed to remove pid file: %v", err)
+func siteConcurrent1(urls []string) {
+	start := time.Now()
+	ch := make(chan string)
+	for _, url := range urls {
+		go func(url string) {
+			ch <- returnType(url)
+		}(url)
 	}
-	return nil
+	for range urls {
+		fmt.Println(">>", <-ch)
+	}
+	fmt.Printf("%.2fs elapsed\n", time.Since(start).Seconds())
+}
+
+func siteSerial(urls []string) {
+	for _, url := range urls {
+		fmt.Println(returnType(url))
+	}
 }
 
 func main() {
-	if err := killServer("server.pid"); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
-		os.Exit(1)
+	urls := []string{
+		"https://www.golang.org",
+		"https://api.github.com",
+		"https://httpbin.org/ip",
 	}
+
+	start := time.Now()
+	siteSerial(urls)
+	elapsed := time.Since(start)
+	fmt.Printf("\n\nTime elapsed: %s\n", elapsed)
+
+	start = time.Now()
+	siteConcurrent1(urls)
+	elapsed = time.Since(start)
+	fmt.Printf("\n\nConcurrent Time elapsed: %s\n", elapsed)
+	siteConcurrent2(urls)
 }
