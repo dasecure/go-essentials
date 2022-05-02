@@ -2,33 +2,37 @@ package main
 
 import (
 	"fmt"
-	"net/http"
+	"math"
+	"time"
 )
 
-func returnType(url string, out chan string) {
-	resp, err := http.Get(url)
-	if err != nil {
-		out <- fmt.Sprint(err)
-		return
-	}
-	defer resp.Body.Close()
-	ctype := resp.Header.Get("Content-Type")
-	out <- fmt.Sprintf("%s: %s", url, ctype)
-}
-
 func main() {
-	urls := []string{
-		"https://golang.org/",
-		"https://golang.org/doc/",
-		"https://golang.org/pkg/",
-		"https://golang.org/cmd/",
+	ch1, ch2 := make(chan int), make(chan int)
+
+	go func() {
+		ch1 <- 42
+	}()
+
+	select {
+	case res := <-ch1:
+		fmt.Println("ch1:", res)
+	case res := <-ch2:
+		fmt.Println("ch2:", res)
 	}
-	// create channels
-	ch := make(chan string)
-	for _, url := range urls {
-		go returnType(url, ch)
+
+	fmt.Println("--------------------")
+
+	out := make(chan float64)
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		out <- math.Pi
+	}()
+
+	select {
+	case res := <-out:
+		fmt.Println("out:", res)
+	case <-time.After(20 * time.Millisecond):
+		fmt.Println("timeout")
 	}
-	for range urls {
-		fmt.Println(<-ch)
-	}
+
 }
